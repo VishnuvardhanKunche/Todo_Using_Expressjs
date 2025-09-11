@@ -13,9 +13,44 @@ module.exports = (sequelize, DataTypes) => {
       // define association here
     }
 
+
     static addTodo({ title, dueDate}) {
       return this.create({ title: title, dueDate: dueDate, completed: false })
     }
+
+    static getTodos() {
+      return this.findAll()
+    }
+  
+    static async overdue() {
+  return this.findAll({
+    where: {
+      dueDate: { [Sequelize.Op.lt]: new Date() },
+      completed: false
+    },
+    order: [["dueDate", "ASC"]]
+  });
+}
+
+static async dueToday() {
+  return this.findAll({
+    where: {
+      dueDate: { [Sequelize.Op.eq]: new Date() },
+      completed: false
+    },
+    order: [["dueDate", "ASC"]]
+  });
+}
+
+static async dueLater() {
+  return this.findAll({
+    where: {
+      dueDate: { [Sequelize.Op.gt]: new Date() },
+      completed: false
+    },
+    order: [["dueDate", "ASC"]]
+  });
+}
 
     markAsCompleted() {
       return this.update({ completed: true })

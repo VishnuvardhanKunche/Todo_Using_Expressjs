@@ -1,65 +1,75 @@
-const {request,response} = require('express')
-const express = require('express')
-const app = express()
+const express = require("express");
+const app = express();
+const path = require("path");
 const bodyParser = require("body-parser");
+
 app.use(bodyParser.json());
+app.use(express.urlencoded({ extended: true }));
 
-const {Todo} = require("./models")
+const { Todo } = require("./models");
 
-app.get("/todos", async (request, response) => {
-    try {
-        // Fetch all todos from the database
-        const todos = await Todo.findAll();
-        // Send the todos as JSON response
-        return response.json(todos);
-    } catch (error) {
-        console.log(error);
-        return response.status(500).json({ error: "Something went wrong while fetching todos" });
-    }
+// Set EJS as template engine
+app.set("view engine", "ejs");
+app.set("views", path.join(__dirname, "views"));
+app.use(express.static(path.join(__dirname, "public")));
+
+// Home route
+app.get("/", async (req, res) => {
+  const todos = await Todo.findAll({ order: [["dueDate", "ASC"]] });
+  const today = new Date().toISOString().split("T")[0];
+
+  const overdueTodos = todos.filter(todo => todo.dueDate < today && !todo.completed);
+  const dueTodayTodos = todos.filter(todo => todo.dueDate === today);
+  const dueLaterTodos = todos.filter(todo => todo.dueDate > today);
+
+  res.render("index", { overdueTodos, dueTodayTodos, dueLaterTodos });
 });
 
-
-
-app.post("/todos", async (request, response)=>{
-    console.log("Creating a todo", request.body)
-
-    try{
-        const todo = await Todo.addTodo({ title: request.body.title, dueDate: request.body.dueDate, completed: false})
-        return response.json(todo)
-    }catch{
-        console.log(error)
-        return response.status(422).json(error)
-    }
-   
-})
-
-app.put("/todos/:id/markAsCompleted", async (request, response) =>{
-    console.log("We have to update a todo with ID:", request.params.id)
-    const todo = await Todo.findByPk(request.params.id)
-    try {
-        const updatedTodo = await todo.markAsCompleted()
-        return response.json(updatedTodo)
-    } catch(error) {
-        console.log(error)
-        return response.status(422).json(error)
-    }
-})
-
-app.delete("/todos/:id", async (request, response) => {
-    try {
-        const deleted = await Todo.destroy({
-            where: { id: request.params.id }
-        });
-        // If deleted > 0, deletion was successful
-        return response.json(deleted > 0);
-    } catch (error) {
-        console.log(error);
-        return response.status(500).json({ error: "Something went wrong while deleting todo" });
-    }
+// Get all todos as JSON
+app.get("/todos", async (req, res) => {
+  try {
+    const todos = await Todo.findAll();
+    res.json(todos);
+  } catch (error) {
+    res.status(500).json({ error: "Something went wrong while fetching todos" });
+  }
 });
 
+// Add a todo
+app.post("/todos", async (req, res) => {
+  try {
+    const todo = await Todo.addTodo({
+      title: req.body.title,
+      dueDate: req.body.dueDate,
+      completed: false
+    });
+    res.json(todo);
+  } catch (error) {
+    res.status(422).json(error);
+  }
+});
 
+// Mark todo as completed
+app.put("/todos/:id/markAsCompleted", async (req, res) => {
+  const todo = await Todo.findByPk(req.params.id);
+  try {
+    const updatedTodo = await todo.markAsCompleted();
+    res.json(updatedTodo);
+  } catch (error) {
+    res.status(422).json(error);
+  }
+});
 
-app.listen(3000, ()=>{
-    console.log("started express server at port 3000")
-})
+// Delete a todo
+app.delete("/todos/:id", async (req, res) => {
+  try {
+    const deleted = await Todo.destroy({ where: { id: req.params.id } });
+    res.json(deleted > 0);
+  } catch (error) {
+    res.status(500).json({ error: "Something went wrong while deleting todo" });
+  }
+});
+
+app.listen(3000, () => {
+  console.log("Express server started on port 3000");
+});

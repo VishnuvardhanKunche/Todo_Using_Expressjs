@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Todo Manager</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body class="bg-white font-sans">
+
+<div class="grid grid-cols-6 mt-10">
+  <div class="col-start-3 col-span-2">
+
+    <%- include("header.ejs") %>
+
+    <!-- Overdue -->
+    <div class="mt-6">
+      <h5 class="text-lg font-semibold text-gray-700">
+        Overdue (<%= overdueTodos.length %>)
+      </h5>
+      <%- include("todos", { todos: overdueTodos }) %>
+    </div>
+
+    <!-- Due Today -->
+    <div class="mt-6">
+      <h5 class="text-lg font-semibold text-gray-700">
+        Due Today (<%= dueTodayTodos.length %>)
+      </h5>
+      <%- include("todos", { todos: dueTodayTodos }) %>
+    </div>
+
+    <!-- Due Later -->
+    <div class="mt-6">
+      <h5 class="text-lg font-semibold text-gray-700">
+        Due Later (<%= dueLaterTodos.length %>)
+      </h5>
+      <%- include("todos", { todos: dueLaterTodos }) %>
+    </div>
+
+  </div>
+</div>
+
+</body>
+</html>
