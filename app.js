@@ -1,84 +1,159 @@
+// app.js
 const express = require("express");
-const app = express();
+const bodyParser = require("body-parser");
+const cookieParser = require("cookie-parser");
+const csrf = require("csurf");
 const path = require("path");
-const { Todo } = require("./models");
 
+const { Todo } = require("./models");
+const sequelize = require("./sequelize");
+
+const app = express();
+
+// view engine
 app.set("view engine", "ejs");
 app.set("views", path.join(__dirname, "views"));
-app.use(express.static(path.join(__dirname, "public")));
-app.use(express.urlencoded({ extended: true }));
 
-// Home route
+// static
+app.use("/public", express.static(path.join(__dirname, "public")));
+app.use(express.static(path.join(__dirname, "public")));
+
+// parsers
+app.use(bodyParser.urlencoded({ extended: true }));
+app.use(bodyParser.json());
+app.use(cookieParser());
+
+// CSRF protection enabled for normal env; disabled in tests
+if (process.env.NODE_ENV !== "test") {
+  const csrfProtection = csrf({ cookie: true });
+  app.use(csrfProtection);
+  // expose token to all views
+  app.use((req, res, next) => {
+    res.locals.csrfToken = req.csrfToken();
+    next();
+  });
+} else {
+  // in test env, provide dummy token for views to render if needed
+  app.use((req, res, next) => {
+    res.locals.csrfToken = "";
+    next();
+  });
+}
+
+// helpers
+const todayISO = () => new Date().toISOString().split("T")[0];
+
+// ROUTES
+
+// home — categorized view
 app.get("/", async (req, res) => {
   const todos = await Todo.findAll({ order: [["dueDate", "ASC"]] });
-
-  const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
+  const today = todayISO();
 
   const overdueTodos = todos.filter(
-    (todo) => todo.dueDate < today && !todo.completed
+    (t) => t.dueDate && t.dueDate < today && !t.completed
   );
-  const dueTodayTodos = todos.filter((todo) => todo.dueDate === today);
-  const dueLaterTodos = todos.filter((todo) => todo.dueDate > today);
+  const dueTodayTodos = todos.filter(
+    (t) => t.dueDate && t.dueDate === today && !t.completed
+  );
+  const dueLaterTodos = todos.filter(
+    (t) => t.dueDate && t.dueDate > today && !t.completed
+  );
+  const completedTodos = todos.filter((t) => t.completed);
 
   res.render("index", {
     overdueTodos,
     dueTodayTodos,
     dueLaterTodos,
+    completedTodos,
   });
 });
 
-// Add new todo
+// API: Create todo
 app.post("/todos", async (req, res) => {
   try {
-    await Todo.create({
-      title: req.body.title,
-      dueDate: req.body.dueDate,
-      completed: false,
-    });
-    res.redirect("/");
+    const { title, dueDate } = req.body;
+    // server-side validation (also add client-side)
+    if (!title || title.trim() === "" || !dueDate) {
+      // if request from browser form -> redirect with 400 message? keep simple
+      return res.status(400).send("title and dueDate required");
+    }
+    await Todo.addTodo({ title: title.trim(), dueDate });
+    return res.redirect("/");
   } catch (err) {
     console.error(err);
-    res.status(500).send("Error creating todo");
+    return res.status(500).send("Error creating todo");
   }
 });
 
-// Mark as completed
-app.get("/todos/:id/complete", async (req, res) => {
+// API: Update todo (PUT /todos/:id) - set completion status or change fields
+app.put("/todos/:id", async (req, res) => {
+  try {
+    const todo = await Todo.findByPk(req.params.id);
+    if (!todo) return res.status(404).json({ error: "Not found" });
+
+    // only update fields we allow (completed, title, dueDate)
+    if (typeof req.body.completed !== "undefined") {
+      await todo.setCompletionStatus(!!req.body.completed);
+    }
+    if (typeof req.body.title !== "undefined") {
+      todo.title = req.body.title;
+    }
+    if (typeof req.body.dueDate !== "undefined") {
+      todo.dueDate = req.body.dueDate || null;
+    }
+    await todo.save();
+    return res.json(todo);
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "Failed to update" });
+  }
+});
+
+// API: Delete todo (DELETE /todos/:id)
+app.delete("/todos/:id", async (req, res) => {
+  try {
+    const deleted = await Todo.destroy({ where: { id: req.params.id } });
+    return res.json({ deleted: deleted > 0 });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "Failed to delete" });
+  }
+});
+
+// For forms (browser actions) without method override: support POST endpoints that redirect
+// mark complete/uncomplete via POST endpoint for forms
+app.post("/todos/:id/set-completion", async (req, res) => {
   try {
     const todo = await Todo.findByPk(req.params.id);
     if (todo) {
-      todo.completed = true;
-      await todo.save();
+      const completed = req.body.completed === "true" || req.body.completed === true;
+      await todo.setCompletionStatus(completed);
     }
-    res.redirect("/");
+    return res.redirect("/");
   } catch (err) {
     console.error(err);
-    res.status(500).send("Error marking todo complete");
+    return res.status(500).send("Error toggling completion");
   }
 });
 
-// 🔄 Toggle completion (complete <-> undo)
-app.get("/todos/:id/toggle", async (req, res) => {
-  const todo = await Todo.findByPk(req.params.id);
-  if (todo) {
-    todo.completed = !todo.completed; // flip status
-    await todo.save();
-  }
-  res.redirect("/");
-});
-
-
-// Delete todo
-app.get("/todos/:id/delete", async (req, res) => {
+// delete via form-post
+app.post("/todos/:id/delete", async (req, res) => {
   try {
     await Todo.destroy({ where: { id: req.params.id } });
-    res.redirect("/");
+    return res.redirect("/");
   } catch (err) {
     console.error(err);
-    res.status(500).send("Error deleting todo");
+    return res.status(500).send("Error deleting");
   }
 });
 
-app.listen(3000, () => {
-  console.log("Server running on http://localhost:3000");
+// error handler for CSRF
+app.use((err, req, res, next) => {
+  if (err && err.code === "EBADCSRFTOKEN") {
+    return res.status(403).send("Form tampered with");
+  }
+  return next(err);
 });
+
+module.exports = app;

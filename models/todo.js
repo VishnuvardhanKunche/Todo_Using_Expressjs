@@ -1,68 +1,42 @@
-'use strict';
-const {
-  Model
-} = require('sequelize');
-module.exports = (sequelize, DataTypes) => {
-  class Todo extends Model {
-    /**
-     * Helper method for defining associations.
-     * This method is not a part of Sequelize lifecycle.
-     * The `models/index` file will call this method automatically.
-     */
-    static associate(models) {
-      // define association here
-    }
+// models/todo.js
+const { DataTypes, Model } = require("sequelize");
+const sequelize = require("../sequelize");
 
-
-    static addTodo({ title, dueDate}) {
-      return this.create({ title: title, dueDate: dueDate, completed: false })
-    }
-
-    static getTodos() {
-      return this.findAll()
-    }
-  
-    static async overdue() {
-  return this.findAll({
-    where: {
-      dueDate: { [Sequelize.Op.lt]: new Date() },
-      completed: false
-    },
-    order: [["dueDate", "ASC"]]
-  });
-}
-
-static async dueToday() {
-  return this.findAll({
-    where: {
-      dueDate: { [Sequelize.Op.eq]: new Date() },
-      completed: false
-    },
-    order: [["dueDate", "ASC"]]
-  });
-}
-
-static async dueLater() {
-  return this.findAll({
-    where: {
-      dueDate: { [Sequelize.Op.gt]: new Date() },
-      completed: false
-    },
-    order: [["dueDate", "ASC"]]
-  });
-}
-
-    markAsCompleted() {
-      return this.update({ completed: true })
-    }
+class Todo extends Model {
+  static addTodo({ title, dueDate }) {
+    // ensure null for blank dueDate
+    const dd = dueDate ? dueDate : null;
+    return this.create({ title, dueDate: dd, completed: false });
   }
-  Todo.init({
-    title: DataTypes.STRING,
-    dueDate: DataTypes.DATEONLY,
-    completed: DataTypes.BOOLEAN
-  }, {
+
+  // new method: accepts boolean and saves
+  async setCompletionStatus(isCompleted) {
+    this.completed = !!isCompleted;
+    await this.save();
+    return this;
+  }
+}
+
+Todo.init(
+  {
+    title: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
+    dueDate: {
+      type: DataTypes.DATEONLY,
+      allowNull: true,
+    },
+    completed: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+    },
+  },
+  {
     sequelize,
-    modelName: 'Todo',
-  });
-  return Todo;
-};
+    modelName: "Todo",
+    tableName: "Todos",
+  }
+);
+
+module.exports = Todo;

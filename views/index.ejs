@@ -1,45 +1,47 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>My Todo Application</title>
-  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Todo App</title>
+  <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="/css/styles.css" />
 </head>
-<body class="bg-gray-50 flex justify-center mt-10">
-
-  <div class="w-full max-w-xl bg-white p-6 rounded-lg shadow-md">
+<body class="bg-gray-100 min-h-screen flex items-start justify-center py-10">
+  <div class="w-full max-w-2xl bg-white p-6 rounded-lg shadow">
     <h1 class="text-2xl font-bold mb-4">My Todo Application</h1>
 
-    <!-- Add new todo form -->
-    <form action="/todos" method="POST" class="flex items-center space-x-2 mb-6">
-      <input
-        type="text"
-        name="title"
-        placeholder="What's next?"
-        class="flex-1 border p-2 rounded"
-        required
-      />
-      <input
-        type="date"
-        name="dueDate"
-        class="border p-2 rounded"
-        required
-      />
-      <button
-        type="submit"
-        class="bg-green-600 text-white px-4 py-2 rounded hover:bg-purple-700"
-      >
-        Add
-      </button>
+    <!-- Add form (client-side validation below) -->
+    <form id="addTodoForm" action="/todos" method="POST" class="flex gap-2 mb-6">
+      <input name="title" id="title" type="text" placeholder="What's next?" class="flex-1 border p-2 rounded" required />
+      <input name="dueDate" id="dueDate" type="date" class="border p-2 rounded" required />
+      <% if (csrfToken) { %>
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+      <% } %>
+      <button type="submit" class="bg-indigo-600 text-white px-4 py-2 rounded">Add</button>
     </form>
 
-    <!-- Todo Sections -->
+    <!-- Client-side validation script -->
+    <script>
+      (function () {
+        const form = document.getElementById('addTodoForm');
+        form.addEventListener('submit', function (e) {
+          const title = document.getElementById('title').value.trim();
+          const dueDate = document.getElementById('dueDate').value;
+          if (!title || !dueDate) {
+            e.preventDefault();
+            alert('Please provide both title and due date.');
+            return false;
+          }
+        });
+      })();
+    </script>
+
+    <!-- Sections -->
     <%- include("./todo", { title: "Overdue", todos: overdueTodos }) %>
     <%- include("./todo", { title: "Due Today", todos: dueTodayTodos }) %>
     <%- include("./todo", { title: "Due Later", todos: dueLaterTodos }) %>
+    <%- include("./todo", { title: "Completed Items", todos: completedTodos }) %>
   </div>
-
 </body>
 </html>
