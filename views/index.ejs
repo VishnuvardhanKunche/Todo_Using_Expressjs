@@ -1,45 +1,45 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Todo Manager</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="/css/styles.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>My Todo Application</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="/css/styles.css" />
 </head>
-<body class="bg-white font-sans">
+<body class="bg-gray-50 flex justify-center mt-10">
 
-<div class="grid grid-cols-6 mt-10">
-  <div class="col-start-3 col-span-2">
+  <div class="w-full max-w-xl bg-white p-6 rounded-lg shadow-md">
+    <h1 class="text-2xl font-bold mb-4">My Todo Application</h1>
 
-    <%- include("header.ejs") %>
+    <!-- Add new todo form -->
+    <form action="/todos" method="POST" class="flex items-center space-x-2 mb-6">
+      <input
+        type="text"
+        name="title"
+        placeholder="What's next?"
+        class="flex-1 border p-2 rounded"
+        required
+      />
+      <input
+        type="date"
+        name="dueDate"
+        class="border p-2 rounded"
+        required
+      />
+      <button
+        type="submit"
+        class="bg-green-600 text-white px-4 py-2 rounded hover:bg-purple-700"
+      >
+        Add
+      </button>
+    </form>
 
-    <!-- Overdue -->
-    <div class="mt-6">
-      <h5 class="text-lg font-semibold text-gray-700">
-        Overdue (<%= overdueTodos.length %>)
-      </h5>
-      <%- include("todos", { todos: overdueTodos }) %>
-    </div>
-
-    <!-- Due Today -->
-    <div class="mt-6">
-      <h5 class="text-lg font-semibold text-gray-700">
-        Due Today (<%= dueTodayTodos.length %>)
-      </h5>
-      <%- include("todos", { todos: dueTodayTodos }) %>
-    </div>
-
-    <!-- Due Later -->
-    <div class="mt-6">
-      <h5 class="text-lg font-semibold text-gray-700">
-        Due Later (<%= dueLaterTodos.length %>)
-      </h5>
-      <%- include("todos", { todos: dueLaterTodos }) %>
-    </div>
-
+    <!-- Todo Sections -->
+    <%- include("./todo", { title: "Overdue", todos: overdueTodos }) %>
+    <%- include("./todo", { title: "Due Today", todos: dueTodayTodos }) %>
+    <%- include("./todo", { title: "Due Later", todos: dueLaterTodos }) %>
   </div>
-</div>
 
 </body>
 </html>
