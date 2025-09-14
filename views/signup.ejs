@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sign Up - Todo App</title>
+  <link rel="stylesheet" href="/public/css/styles.css">
+</head>
+<body class="auth-container">
+  <div class="auth-card">
+    <h1>Sign Up</h1>
+
+    <!-- Flash Messages -->
+    <div class="flash-messages">
+      <% if (messages.error && messages.error.length > 0) { %>
+        <% messages.error.forEach(msg => { %>
+          <div class="flash-message flash-error"><%= msg %></div>
+        <% }) %>
+      <% } %>
+
+      <% if (messages.success && messages.success.length > 0) { %>
+        <% messages.success.forEach(msg => { %>
+          <div class="flash-message flash-success"><%= msg %></div>
+        <% }) %>
+      <% } %>
+    </div>
+
+    <form action="/signup" method="POST">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      
+      <div class="form-group">
+        <label for="first_name">First Name</label>
+        <input 
+          type="text" 
+          name="first_name" 
+          id="first_name"
+          class="form-input" 
+          placeholder="Enter your first name"
+          required
+        >
+      </div>
+      
+      <div class="form-group">
+        <label for="email">Email Address</label>
+        <input 
+          type="email" 
+          name="email" 
+          id="email"
+          class="form-input" 
+          placeholder="Enter your email"
+          required
+        >
+      </div>
+      
+      <div class="form-group">
+        <label for="password">Password</label>
+        <input 
+          type="password" 
+          name="password" 
+          id="password"
+          class="form-input" 
+          placeholder="Enter your password (min 6 characters)"
+          required
+        >
+      </div>
+      
+      <button type="submit" class="btn btn-primary" style="width: 100%;">
+        Create Account
+      </button>
+    </form>
+
+    <div class="auth-link">
+      <p>Already have an account? <a href="/login">Sign in here</a></p>
+    </div>
+  </div>
+</body>
+</html>

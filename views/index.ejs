@@ -1,47 +1,246 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Todo App</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="stylesheet" href="/css/styles.css" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Todo Dashboard</title>
+  <link rel="stylesheet" href="/public/css/styles.css">
 </head>
-<body class="bg-gray-100 min-h-screen flex items-start justify-center py-10">
-  <div class="w-full max-w-2xl bg-white p-6 rounded-lg shadow">
-    <h1 class="text-2xl font-bold mb-4">My Todo Application</h1>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <div class="header">
+      <h1>Welcome, <%= user.first_name %>!</h1>
+      <a href="/logout" class="logout-btn">Logout</a>
+    </div>
 
-    <!-- Add form (client-side validation below) -->
-    <form id="addTodoForm" action="/todos" method="POST" class="flex gap-2 mb-6">
-      <input name="title" id="title" type="text" placeholder="What's next?" class="flex-1 border p-2 rounded" required />
-      <input name="dueDate" id="dueDate" type="date" class="border p-2 rounded" required />
-      <% if (csrfToken) { %>
-        <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
-      <% } %>
-      <button type="submit" class="bg-indigo-600 text-white px-4 py-2 rounded">Add</button>
-    </form>
+    <!-- Main Content -->
+    <div class="main-content">
+      <!-- Flash Messages -->
+      <div class="flash-messages">
+        <% if (messages.error && messages.error.length > 0) { %>
+          <% messages.error.forEach(msg => { %>
+            <div class="flash-message flash-error"><%= msg %></div>
+          <% }) %>
+        <% } %>
 
-    <!-- Client-side validation script -->
-    <script>
-      (function () {
-        const form = document.getElementById('addTodoForm');
-        form.addEventListener('submit', function (e) {
-          const title = document.getElementById('title').value.trim();
-          const dueDate = document.getElementById('dueDate').value;
-          if (!title || !dueDate) {
-            e.preventDefault();
-            alert('Please provide both title and due date.');
-            return false;
-          }
-        });
-      })();
-    </script>
+        <% if (messages.success && messages.success.length > 0) { %>
+          <% messages.success.forEach(msg => { %>
+            <div class="flash-message flash-success"><%= msg %></div>
+          <% }) %>
+        <% } %>
+      </div>
 
-    <!-- Sections -->
-    <%- include("./todo", { title: "Overdue", todos: overdueTodos }) %>
-    <%- include("./todo", { title: "Due Today", todos: dueTodayTodos }) %>
-    <%- include("./todo", { title: "Due Later", todos: dueLaterTodos }) %>
-    <%- include("./todo", { title: "Completed Items", todos: completedTodos }) %>
+      <!-- Add Todo Form -->
+      <div class="form-container">
+        <h2>Add New Todo</h2>
+        <form action="/todos" method="POST" class="add-todo-form">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+          <div class="form-group">
+            <label for="title">Todo Title</label>
+            <input 
+              type="text" 
+              name="title" 
+              id="title"
+              class="form-input" 
+              placeholder="Enter your todo (minimum 5 characters)" 
+              required
+            >
+          </div>
+          <div class="form-group">
+            <label for="dueDate">Due Date</label>
+            <input 
+              type="date" 
+              name="dueDate" 
+              id="dueDate"
+              class="form-input" 
+              required
+            >
+          </div>
+          <button type="submit" class="btn btn-primary">Add Todo</button>
+        </form>
+      </div>
+
+      <!-- Overdue Todos -->
+      <div class="todo-section">
+        <div class="section-header">
+          <h2 class="section-title">🚨 Overdue</h2>
+          <span class="section-count"><%= overdueTodos.length %></span>
+        </div>
+        <% if (overdueTodos.length === 0) { %>
+          <div class="empty-state">
+            No overdue todos! You're doing great! 🎉
+          </div>
+        <% } else { %>
+          <ul class="todo-list">
+            <% overdueTodos.forEach(todo => { %>
+              <li class="todo-item overdue">
+                <div class="todo-content">
+                  <form action="/todos/<%= todo.id %>/set-completion" method="POST" style="display: contents;">
+                    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                    <input 
+                      type="checkbox" 
+                      name="completed" 
+                      value="true" 
+                      class="todo-checkbox"
+                      onchange="this.form.submit()" 
+                      <%= todo.completed ? 'checked' : '' %>
+                    >
+                  </form>
+                  <div>
+                    <span class="todo-text <%= todo.completed ? 'completed' : '' %>">
+                      <%= todo.title %>
+                    </span>
+                    <span class="todo-date">Due: <%= todo.dueDate %></span>
+                  </div>
+                </div>
+                <div class="todo-actions">
+                  <form action="/todos/<%= todo.id %>/delete" method="POST">
+                    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                    <button type="submit" class="btn btn-danger">Delete</button>
+                  </form>
+                </div>
+              </li>
+            <% }) %>
+          </ul>
+        <% } %>
+      </div>
+
+      <!-- Due Today -->
+      <div class="todo-section">
+        <div class="section-header">
+          <h2 class="section-title">📅 Due Today</h2>
+          <span class="section-count"><%= dueTodayTodos.length %></span>
+        </div>
+        <% if (dueTodayTodos.length === 0) { %>
+          <div class="empty-state">
+            No todos due today! Take a well-deserved break! ☕
+          </div>
+        <% } else { %>
+          <ul class="todo-list">
+            <% dueTodayTodos.forEach(todo => { %>
+              <li class="todo-item due-today">
+                <div class="todo-content">
+                  <form action="/todos/<%= todo.id %>/set-completion" method="POST" style="display: contents;">
+                    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                    <input 
+                      type="checkbox" 
+                      name="completed" 
+                      value="true" 
+                      class="todo-checkbox"
+                      onchange="this.form.submit()" 
+                      <%= todo.completed ? 'checked' : '' %>
+                    >
+                  </form>
+                  <div>
+                    <span class="todo-text <%= todo.completed ? 'completed' : '' %>">
+                      <%= todo.title %>
+                    </span>
+                    <span class="todo-date">Due: <%= todo.dueDate %></span>
+                  </div>
+                </div>
+                <div class="todo-actions">
+                  <form action="/todos/<%= todo.id %>/delete" method="POST">
+                    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                    <button type="submit" class="btn btn-danger">Delete</button>
+                  </form>
+                </div>
+              </li>
+            <% }) %>
+          </ul>
+        <% } %>
+      </div>
+
+      <!-- Due Later -->
+      <div class="todo-section">
+        <div class="section-header">
+          <h2 class="section-title">📋 Due Later</h2>
+          <span class="section-count"><%= dueLaterTodos.length %></span>
+        </div>
+        <% if (dueLaterTodos.length === 0) { %>
+          <div class="empty-state">
+            No future todos planned! Time to set some goals! 🎯
+          </div>
+        <% } else { %>
+          <ul class="todo-list">
+            <% dueLaterTodos.forEach(todo => { %>
+              <li class="todo-item due-later">
+                <div class="todo-content">
+                  <form action="/todos/<%= todo.id %>/set-completion" method="POST" style="display: contents;">
+                    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                    <input 
+                      type="checkbox" 
+                      name="completed" 
+                      value="true" 
+                      class="todo-checkbox"
+                      onchange="this.form.submit()" 
+                      <%= todo.completed ? 'checked' : '' %>
+                    >
+                  </form>
+                  <div>
+                    <span class="todo-text <%= todo.completed ? 'completed' : '' %>">
+                      <%= todo.title %>
+                    </span>
+                    <span class="todo-date">Due: <%= todo.dueDate %></span>
+                  </div>
+                </div>
+                <div class="todo-actions">
+                  <form action="/todos/<%= todo.id %>/delete" method="POST">
+                    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                    <button type="submit" class="btn btn-danger">Delete</button>
+                  </form>
+                </div>
+              </li>
+            <% }) %>
+          </ul>
+        <% } %>
+      </div>
+
+      <!-- Completed Todos -->
+      <div class="todo-section">
+        <div class="section-header">
+          <h2 class="section-title">✅ Completed</h2>
+          <span class="section-count"><%= completedTodos.length %></span>
+        </div>
+        <% if (completedTodos.length === 0) { %>
+          <div class="empty-state">
+            No completed todos yet! Get started and check some off! 💪
+          </div>
+        <% } else { %>
+          <ul class="todo-list">
+            <% completedTodos.forEach(todo => { %>
+              <li class="todo-item completed">
+                <div class="todo-content">
+                  <form action="/todos/<%= todo.id %>/set-completion" method="POST" style="display: contents;">
+                    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                    <input 
+                      type="checkbox" 
+                      name="completed" 
+                      value="false" 
+                      class="todo-checkbox"
+                      onchange="this.form.submit()" 
+                      checked
+                    >
+                  </form>
+                  <div>
+                    <span class="todo-text completed">
+                      <%= todo.title %>
+                    </span>
+                    <span class="todo-date">Due: <%= todo.dueDate %></span>
+                  </div>
+                </div>
+                <div class="todo-actions">
+                  <form action="/todos/<%= todo.id %>/delete" method="POST">
+                    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                    <button type="submit" class="btn btn-danger">Delete</button>
+                  </form>
+                </div>
+              </li>
+            <% }) %>
+          </ul>
+        <% } %>
+      </div>
+    </div>
   </div>
 </body>
 </html>

@@ -1,42 +1,35 @@
-// models/todo.js
-const { DataTypes, Model } = require("sequelize");
-const sequelize = require("../sequelize");
-
-class Todo extends Model {
-  static addTodo({ title, dueDate }) {
-    // ensure null for blank dueDate
-    const dd = dueDate ? dueDate : null;
-    return this.create({ title, dueDate: dd, completed: false });
-  }
-
-  // new method: accepts boolean and saves
-  async setCompletionStatus(isCompleted) {
-    this.completed = !!isCompleted;
-    await this.save();
-    return this;
-  }
-}
-
-Todo.init(
-  {
-    title: {
-      type: DataTypes.STRING,
-      allowNull: false,
+module.exports = (sequelize, DataTypes) => {
+  const Todo = sequelize.define(
+    "Todo",
+    {
+      title: {
+        type: DataTypes.STRING,
+        allowNull: false,
+        validate: {
+          notNull: { msg: "Todo title is required" },
+          len: { args: [5, 255], msg: "Title must be at least 5 characters" },
+        },
+      },
+      dueDate: {
+        type: DataTypes.DATEONLY,
+        allowNull: false,
+        validate: {
+          notNull: { msg: "Due date is required" },
+        },
+      },
+      completed: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false,
+      },
     },
-    dueDate: {
-      type: DataTypes.DATEONLY,
-      allowNull: true,
-    },
-    completed: {
-      type: DataTypes.BOOLEAN,
-      defaultValue: false,
-    },
-  },
-  {
-    sequelize,
-    modelName: "Todo",
-    tableName: "Todos",
-  }
-);
+    {
+      tableName: "Todos",
+    }
+  );
 
-module.exports = Todo;
+  Todo.associate = (models) => {
+    Todo.belongsTo(models.User, { foreignKey: "userId" });
+  };
+
+  return Todo;
+};
